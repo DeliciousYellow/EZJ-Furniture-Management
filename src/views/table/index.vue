@@ -66,25 +66,25 @@
       <el-table-column label="商品标签" width="180" align="center">
         <template slot-scope="scope">
           <el-button type="success" @click="OpenDialog(scope.row)" icon='el-icon-rank'>查看商品标签</el-button>
-          <el-dialog :title="Nowtitle" :visible.sync="dialogTableVisible" width="65%">
+          <el-dialog :title="Nowtitle" :visible.sync="ArrVisible[scope.row.furnitureId]" width="65%">
             <div class="dialog-box">
               <el-transfer class="dialog-box"
-                style="text-align: left; display: inline-block; height: 400px;"
-                v-model="nowTag"
-                filterable
-                :titles="['可选标签', '拥有标签']"
-                :button-texts="['移到左边', '移到右边']"
-                :format="{
-                  noChecked: '0/${total}',
-                  hasChecked: '${checked}/${total}'
-                }"
-                @change="TagChange"
-                @left-check-change.prevent="leftCheckChange"
-                :data="ArrayTagInfo">
-                <span slot-scope="{ option }">{{ option.label }}</span>
-                <el-button class="transfer-footer" slot="left-footer" size="small" type="primary" icon="el-icon-plus">添加更多标签</el-button>
-                <el-button class="transfer-footer" slot="right-footer" size="small" type="primary" icon="el-icon-check">保存标签</el-button>
-                <el-button class="transfer-footer" slot="right-footer" size="small" type="primary" icon="el-icon-check">重置</el-button>
+                  style="text-align: left; display: inline-block; height: 400px;"
+                  v-model="nowTag"
+                  filterable
+                  :titles="['可选标签', '拥有标签']"
+                  :button-texts="['移到左边', '移到右边']"
+                  :format="{
+                    noChecked: '0/${total}',
+                    hasChecked: '${checked}/${total}'
+                  }"
+                  @change="TagChange"
+                  @left-check-change="leftCheckChange"
+                  :data="ArrayTagInfo">
+                  <span slot-scope="{ option }">{{ option.label }}</span>
+                  <el-button class="transfer-footer" slot="left-footer" size="small" type="primary" icon="el-icon-plus">添加更多标签</el-button>
+                  <el-button class="transfer-footer" @click="SaveTag(scope.row.furnitureId)" slot="right-footer" size="small" type="primary" icon="el-icon-check">保存标签</el-button>
+                  <el-button class="transfer-footer" slot="right-footer" size="small" type="primary" icon="el-icon-check">重置</el-button>
               </el-transfer>
             </div>
           </el-dialog>
@@ -103,7 +103,7 @@
 </template>
 
 <script>
-import { getAllTag, getList, GetTagById } from '@/api/table'
+import { GetAllTag, GetList, GetTagById, SaveMapping } from '@/api/table'
 
 export default {
   filters: {
@@ -122,11 +122,12 @@ export default {
       listLoading: true,
 
       //是否显示模态框
-      dialogTableVisible: false,
+      // dialogTableVisible: false,  会有同时所有模态框都打开的BUG，使用后面的ArrVisible数组来解决
+
       //当前模态框title
       Nowtitle: null,
       //分页查询的备选页面大小
-      ArraySize:[2,3,4,5,10,50,100,300,500],
+      ArraySize:[3,4,5,10,50,100,300,500],
       //分页查询的页码、每页的大小、总记录条数
       page: 1,
       pageSize: 3,
@@ -138,8 +139,8 @@ export default {
       haveTag:[],
       //当前含有的Tag，跟随页面当前情况变化
       nowTag:[],
-
-      leftChecked:[1,2,3]
+      //每一个商品对应的模态框的是否开启属性都存在这里面
+      ArrVisible:[]
     }
   },
   created() {
@@ -151,9 +152,18 @@ export default {
       //发请求的时候显示转圈
       this.listLoading = true
       //发请求
-      getList(this.page,this.pageSize).then(response => {
+      GetList(this.page,this.pageSize).then(response => {
         // console.log(response)
-        this.list = response.data.furnitures
+        const furnitures = response.data.furnitures
+        this.list = furnitures
+
+        //类似哈希数组的思想，索引为ID值的空间内存，该ID对应的模态框的值
+        const ArrVisible = []
+        furnitures.forEach(F => {
+          ArrVisible[F.furnitureId] = false
+        })
+        this.ArrVisible = ArrVisible
+
         this.total = response.data.total
         //记录总结果条数
         //结果返回之后不转圈了
@@ -161,12 +171,12 @@ export default {
       })
     },
     handleSizeChange(val){
-      console.log(`分页大小发生了改变=>${val}`)
+      // console.log(`分页大小发生了改变=>${val}`)
       this.pageSize = val
       this.fetchData()
     },
     handleCurrentChange(val){
-      console.log(`当前页码发生了改变=>${val}`)
+      // console.log(`当前页码发生了改变=>${val}`)
       this.page = val
       this.fetchData()
     },
@@ -178,9 +188,11 @@ export default {
     },
 
     OpenDialog(row){
-      this.dialogTableVisible = true
+      //显示状态的变量更改
+      this.ArrVisible[row.furnitureId] = true
       this.Nowtitle = row.furnitureName+"的标签"
-      getAllTag().then(response => {
+      
+      GetAllTag().then(response => {
         const data = response.data
         const ArrayTagInfo = [];
         for (let i = 0; i < data.length; i++) {
@@ -217,12 +229,14 @@ export default {
         }
         this.nowTag = Tags
         this.haveTag = Tags
+        //优化左侧的显示
+        this.TagLast(Tags)
       })
     },
     TagChange(A,B,C){
-      console.log("当前右侧的Key数组"+A)
-      console.log("数据移动的方向"+B)
-      console.log("发生移动的数据 key 数组"+C)
+      // console.log("当前右侧的Key数组"+A)
+      // console.log("数据移动的方向"+B)
+      // console.log("发生移动的数据 key 数组"+C)
       if(B==="left"){
         //如果向左移动，就把所对应的封印的标签解开
         C.forEach(key => {
@@ -245,8 +259,36 @@ export default {
         // console.log(this.ArrayTagInfo)
         //如果向右移动，为了让操作更加人性化，在这里把已被封印的tag在ArrayTagInfo中移动到靠后的位置
         //用A可以轻松解决，右侧初始拥有的tag的类型，在左侧对应的tag没有后置的问题
-        //用B循环次数少，效率高(pass)
-        A.forEach(c => {
+        this.TagLast(A)
+        // console.log(this.ArrayTagInfo)
+        
+      }
+    },
+    leftCheckChange(A,B){
+      // console.log("已被勾选的标签的Key数组"+A)
+      // console.log("此次勾选的标签的Key"+B)
+      //找到数组中key等于B的索引
+      const Index = this.ArrayTagInfo.findIndex(i => i.key == B)
+      const checkedTag = this.ArrayTagInfo[Index]
+      //此次被选中的tag元素
+      const end = checkedTag.label.indexOf("：")//中文冒号
+      const checkedTagType = checkedTag.label.substring(0, end)
+      // console.log("当前选中的TagType"+checkedTagType)
+      //与此次勾选的标签类型相同的其他标签全部设为不可点击true
+      this.ArrayTagInfo.forEach(item => {
+        //截串到冒号之前
+        // console.log(item.label)
+        const end = item.label.indexOf("：")//中文冒号
+        const tagType = item.label.substring(0, end)
+        if(tagType === checkedTagType && item.key !== checkedTag.key){
+          item.disabled = !item.disabled
+        }
+      })
+    },
+
+    //把标签放到最后面
+    TagLast(value){
+      value.forEach(c => {
           // console.log(c)
           let index = this.ArrayTagInfo.findIndex(item => item.key === c)
           if (index !== -1) {
@@ -270,30 +312,15 @@ export default {
             }
           }
         })
-        // console.log(this.ArrayTagInfo)
-        
-      }
     },
-    leftCheckChange(A,B){
-      console.log("A")
-      // console.log("已被勾选的标签的Key数组"+A)
-      // console.log("此次勾选的标签的Key"+B)
-      //找到数组中key等于B的索引
-      const Index = this.ArrayTagInfo.findIndex(i => i.key == B)
-      const checkedTag = this.ArrayTagInfo[Index]
-      //此次被选中的tag元素
-      const end = checkedTag.label.indexOf("：")//中文冒号
-      const checkedTagType = checkedTag.label.substring(0, end)
-      // console.log("当前选中的TagType"+checkedTagType)
-      //与此次勾选的标签类型相同的其他标签全部设为不可点击true
-      this.ArrayTagInfo.forEach(item => {
-        //截串到冒号之前
-        // console.log(item.label)
-        const end = item.label.indexOf("：")//中文冒号
-        const tagType = item.label.substring(0, end)
-        if(tagType === checkedTagType && item.key !== checkedTag.key){
-          item.disabled = !item.disabled
-        }
+
+    SaveTag(id){
+      // alert("保存")
+      // console.log(`当前nowtag数组${this.nowTag}类型：${typeof this.nowTag}`)
+      // console.log(`${id}类型：${typeof this.nowTag}`)
+      
+      SaveMapping(id,this.nowTag).then((response) => {
+        console.log(response)
       })
     },
   }
@@ -302,6 +329,26 @@ export default {
 
 <style>
 .dialog-box{
-  height: 100%;
+  height: 500px !important
+
+}
+
+/*穿梭框内部展示列表的高宽度*/
+.el-transfer-panel__list.is-filterable{
+    width:300px;
+    height:350px;
+}
+/*穿梭框外框高宽度*/
+.el-transfer-panel{
+    width: 300px;
+    height: 500px;
+}
+
+.el-transfer-panel:first-child .el-checkbox{
+  /*
+    隐藏穿梭框左侧列表的全选框所在的容器，否则会出BUG，
+    原因在于，我在leftCheckChange()里实现了同类型单选，导致全选会勾选多个同类型而出错
+  */
+  display: none;
 }
 </style>
