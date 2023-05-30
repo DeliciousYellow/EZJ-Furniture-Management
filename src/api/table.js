@@ -1,7 +1,7 @@
 import request from '@/utils/request'
 
 export function GetList(page,pageSize) {
-  console.log(page,pageSize)
+  // console.log(page,pageSize)
   return request({
     url: `/Admin/GetFurnitureAllPage/${page}/${pageSize}`,
     method: 'get'

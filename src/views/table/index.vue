@@ -78,6 +78,7 @@
                     noChecked: '0/${total}',
                     hasChecked: '${checked}/${total}'
                   }"
+                  
                   @change="TagChange"
                   @left-check-change="leftCheckChange"
                   :data="ArrayTagInfo">
@@ -120,7 +121,6 @@ export default {
     return {
       list: null,
       listLoading: true,
-
       //是否显示模态框
       // dialogTableVisible: false,  会有同时所有模态框都打开的BUG，使用后面的ArrVisible数组来解决
 
@@ -140,7 +140,10 @@ export default {
       //当前含有的Tag，跟随页面当前情况变化
       nowTag:[],
       //每一个商品对应的模态框的是否开启属性都存在这里面
-      ArrVisible:[]
+      ArrVisible:[],
+      //手动记录左侧已勾选的元素，在下一次打开时，把他们对应类型的其他tag变为禁用，以解决的重新打开dialog之后上次勾选依然保留而带来的BUG
+      //这里应该是一个嵌套数组
+      Checked:[]
     }
   },
   created() {
@@ -192,7 +195,8 @@ export default {
       this.ArrVisible[row.furnitureId] = true
       this.Nowtitle = row.furnitureName+"的标签"
       
-      GetAllTag().then(response => {
+      GetAllTag()
+      .then(response => {
         const data = response.data
         const ArrayTagInfo = [];
         for (let i = 0; i < data.length; i++) {
@@ -204,34 +208,68 @@ export default {
         }
         this.ArrayTagInfo = ArrayTagInfo;
       })
-      //查询该商品所拥有的标签，然后赋值给haveTag
-      GetTagById(row.furnitureId).then(response => {
-        const data = response.data
-        // console.log(data)
-        const Tags = [];
-        //返回结果是商品所拥有的标签，遍历每一个标签拿到标签的ID
-        //然后遍历ArrayTagInfo数组的每一个元素，每当这个元素的tagtype等于返回结果中的tagtype，就把这个标签设为不可点击
-        //需要注意的是当前标签会移到右侧去，所以不应该设为不可点击
-        for (let i = 0; i < data.length; i++) {
-          Tags[i] = data[i].tagId
-          //修改标签的是否禁用 disabled
-          // const Items = this.ArrayTagInfo.filter(one => one.key === data[i].tagId)
-          this.ArrayTagInfo.forEach(item => {
-            // console.log(item.label)
-            //截串到冒号之前
-            const end = item.label.indexOf("：")//中文冒号
-            var tagType = item.label.substring(0, end)
-            if(tagType === data[i].tagType && item.key !== data[i].tagId){
-              //默认情况所有数组是可选false，取反为true
-              item.disabled = !item.disabled
-            }
+      //等查询到标签信息全部存储好之后，再进行操作
+      .then(() => {
+        //查询该商品所拥有的标签，然后赋值给haveTag
+        GetTagById(row.furnitureId).then(response => {
+          const data = response.data
+          // console.log(data)
+          const Tags = [];
+          //返回结果是商品所拥有的标签，遍历每一个标签拿到标签的ID
+          //然后遍历ArrayTagInfo数组的每一个元素，每当这个元素的tagtype等于返回结果中的tagtype，就把这个标签设为不可点击
+          //需要注意的是当前标签会移到右侧去，所以不应该设为不可点击
+          // alert(1)
+          for (let i = 0; i < data.length; i++) {
+            Tags[i] = data[i].tagId
+            //修改标签的是否禁用属性 disabled
+            // const Items = this.ArrayTagInfo.filter(one => one.key === data[i].tagId)
+            this.ArrayTagInfo.forEach(item => {
+              // console.log(item.label)
+              //截串到冒号之前
+              const end = item.label.indexOf("：")//中文冒号
+              var tagType = item.label.substring(0, end)
+              if(tagType === data[i].tagType && item.key !== data[i].tagId){
+                //默认情况所有数组是可选false，取反为true
+                item.disabled = true
+              }
+            })
+          }
+          this.nowTag = Tags
+          this.haveTag = Tags
+          
+          //优化左侧的显示
+          this.TagLast(Tags)
+        })
+      })
+      //最后处理二次打开模态框之后出现的BUG
+      .then(()=>{
+        const trueIndex = this.ArrVisible.findIndex((item) => item === true);
+        // console.log("当前打开的模态框ID:"+trueIndex)
+        const checkedDialog = this.Checked[trueIndex]
+        // console.log("此时的已选数组"+checkedDialog)
+        if(checkedDialog!=null){
+          checkedDialog.forEach(B =>{
+            const Index = this.ArrayTagInfo.findIndex(i => i.key == B)
+            const checkedTag = this.ArrayTagInfo[Index]
+            //此次被选中的tag元素
+            const end = checkedTag.label.indexOf("：")//中文冒号
+            const checkedTagType = checkedTag.label.substring(0, end)
+            // console.log("当前选中的TagType"+checkedTagType)
+            //与此次勾选的标签类型相同的其他标签全部设为不可点击true
+            this.ArrayTagInfo.forEach(item => {
+              //截串到冒号之前
+              // console.log(item.label)
+              const end = item.label.indexOf("：")//中文冒号
+              const tagType = item.label.substring(0, end)
+              // console.log(item.key+"==="+item.disabled)
+              if(tagType === checkedTagType && item.key !== checkedTag.key){
+                item.disabled = true
+              }
+            })
           })
         }
-        this.nowTag = Tags
-        this.haveTag = Tags
-        //优化左侧的显示
-        this.TagLast(Tags)
       })
+      
     },
     TagChange(A,B,C){
       // console.log("当前右侧的Key数组"+A)
@@ -261,12 +299,15 @@ export default {
         //用A可以轻松解决，右侧初始拥有的tag的类型，在左侧对应的tag没有后置的问题
         this.TagLast(A)
         // console.log(this.ArrayTagInfo)
-        
       }
     },
     leftCheckChange(A,B){
-      // console.log("已被勾选的标签的Key数组"+A)
+      console.log("已被勾选的标签的Key数组"+A)
       // console.log("此次勾选的标签的Key"+B)
+      //存储已选的数组
+      const trueIndex = this.ArrVisible.findIndex((item) => item === true);
+      // console.log("当前打开的模态框ID:"+trueIndex)
+      this.Checked[trueIndex] = A
       //找到数组中key等于B的索引
       const Index = this.ArrayTagInfo.findIndex(i => i.key == B)
       const checkedTag = this.ArrayTagInfo[Index]

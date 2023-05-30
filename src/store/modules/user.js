@@ -57,7 +57,7 @@ const actions = {
           return reject('Verification failed, please Login again.')
         }
         const { adminName, adminCode ,adminAvatarUrl } = data
-        console.log(data)
+        // console.log(data)
         commit('SET_NAME', adminName)
         commit('SET_CODE', adminCode)
         commit('SET_AVATAR', adminAvatarUrl)
