@@ -89,10 +89,10 @@
                   <span slot-scope="{ option }">{{ option.label }}</span>
                   <div slot="left-footer" class="button">
                     <el-button class="transfer-footer" @click="innerVisible = true" size="small" type="primary" icon="el-icon-plus">添加更多标签</el-button>
-                    <el-button class="transfer-footer" @click="DeleteTag" size="small" type="danger" icon="el-icon-plus">删除已选标签</el-button>
+                    <el-button class="transfer-footer" @click="DeleteTag(scope.row)" size="small" type="danger" icon="el-icon-plus">删除已选标签</el-button>
                   </div>
                   <div slot="right-footer" class="button">
-                    <el-button class="transfer-footer" @click="SaveTag(scope.row.furnitureId)" size="small" type="primary" icon="el-icon-check">保存标签</el-button>
+                    <el-button class="transfer-footer" @click="SaveTag(scope.row)" size="small" type="primary" icon="el-icon-check">保存标签</el-button>
                   </div>
                   <!-- <el-button class="transfer-footer" slot="right-footer" size="small" type="primary" icon="el-icon-check">重置</el-button> -->
               </el-transfer>
@@ -110,25 +110,51 @@
                   </el-form-item>
                 </el-form>
                 <div class="button">
-                  <el-button type="primary" @click="AddTag('ruleForm')">提交这个标签</el-button>
+                  <el-button type="primary" @click="AddTag('ruleForm',scope.row)">提交这个标签</el-button>
                 </div>
               </el-dialog>
           </el-dialog>
         </template>
       </el-table-column>
       
-      <el-table-column label="基本信息操作" width="260" align="center">
+      <el-table-column label="基本信息操作" width="365" align="center"> 
         <template slot-scope="scope">
-          <el-button type="warning" @click="UpdateById" icon="el-icon-edit">修改</el-button>
+          <el-button type="primary" @click="AddImgById(scope.row)" icon="el-icon-circle-plus-outline">添加图片</el-button>
+          <el-button type="warning" @click="UpdateById(scope.row)" icon="el-icon-edit">修改</el-button>
           <el-button type="danger" @click="DeleteById(scope.row.furnitureId)" icon="el-icon-delete">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
+    
+    <el-dialog :title="title" :visible.sync="dialogPictureVisible">
+      <span class="block" v-for="picture in pictures" :key="picture.pictureId">
+        <el-image
+          style="width: 100px; height: 100px; margin: 10px;"
+          :src="picture.pictureUrl"
+          :preview-src-list="pictureList"
+          fit="fill"></el-image>
+      </span>
+        <el-form ref="form" label-width="80px">
+          <el-row>
+          <el-col :span="10">
+            <el-upload class="avatar-uploader"
+            action="自定义上传时无效，但保留该属性"
+            accept=".jpg"
+            auto-upload
+            :http-request="Upload"
+            :show-file-list="false">
+            <i class="el-icon-plus avatar-uploader-icon"></i>
+            </el-upload>
+          </el-col>
+        </el-row>
+      </el-form>
+    </el-dialog>
+
   </div>
 </template>
 
 <script>
-import { GetAllTag, GetList, GetTagById, SaveMapping , AddTag , DeleteTag , DeleteFurniture} from '@/api/table'
+import { GetAllTag, GetList, GetTagById, SaveMapping, AddTag, DeleteTag, DeleteFurniture, AddPictureById, GetPictureById} from '@/api/table'
 
 export default {
   filters: {
@@ -145,6 +171,50 @@ export default {
     return {
       list: null,
       listLoading: true,
+      //是否显示添加图片的模态框
+      dialogPictureVisible: false,
+      title:"为XX添加图片",
+      //当前模态框所属商品
+      furnitureRow:null,
+      //用户添加的图片file
+      file:null,
+      pictures:[
+        {
+          pictureId:'1',
+          furnitureId:'1',
+          pictureUrl:'https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg'
+        },
+        {
+          pictureId:'2',
+          furnitureId:'1',
+          pictureUrl:'https://delicious-blood.oss-cn-chengdu.aliyuncs.com/EB-furnitures/371edba9 40c9 47e9 819e c1593c566643-猫咪.jpg'
+        },
+        {
+          pictureId:'3',
+          furnitureId:'1',
+          pictureUrl:'https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg'
+        },
+        {
+          pictureId:'4',
+          furnitureId:'1',
+          pictureUrl:'https://delicious-blood.oss-cn-chengdu.aliyuncs.com/EB-furnitures/371edba9 40c9 47e9 819e c1593c566643-猫咪.jpg'
+        },
+        {
+          pictureId:'5',
+          furnitureId:'1',
+          pictureUrl:'https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg'
+        },
+        {
+          pictureId:'6',
+          furnitureId:'1',
+          pictureUrl:'https://delicious-blood.oss-cn-chengdu.aliyuncs.com/EB-furnitures/371edba9 40c9 47e9 819e c1593c566643-猫咪.jpg'
+        },
+      ],
+      pictureList:[
+        'https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg',
+        'https://delicious-blood.oss-cn-chengdu.aliyuncs.com/EB-furnitures/371edba9 40c9 47e9 819e c1593c566643-猫咪.jpg',
+        "https://delicious-blood.oss-cn-chengdu.aliyuncs.com/EB-furnitures/4aa0e81d 3c66 4ad8 aa43 4f2ad25c5e95-H.jpg"
+      ],
       //是否显示模态框
       // dialogTableVisible: false,  会有同时所有模态框都打开的BUG，使用后面的ArrVisible数组来解决
       //是否显示内层模态框
@@ -222,17 +292,78 @@ export default {
       this.page = val
       this.fetchData()
     },
+
+
+
     UpdateById(){
       alert("修改")
     },
     DeleteById(furnitureId){
-      alert("删除")
-      console.log(furnitureId)
-      DeleteFurniture(furnitureId).then((response) => {
-        console.log(response)
-      })
-      
+      var msg = "您真的确定要删除吗?请确认！"; 
+      if (confirm(msg)==true){ 
+        alert("删除")
+        console.log(furnitureId)
+        DeleteFurniture(furnitureId).then((response) => {
+          console.log(response)
+          this.fetchData()
+        })
+      }else{ 
+        return
+      }
     },
+
+    //查询图片
+    GetPictureData(){
+      GetPictureById(this.furnitureRow.furnitureId).then((response) => {
+        // console.log(response)
+        this.pictures = response.data
+        response.data.forEach(item => {
+          this.pictureList.push(
+            item.pictureUrl
+          )
+        })
+      })
+    },
+
+    AddImgById(row){
+      this.dialogPictureVisible = true
+      this.furnitureRow = row
+      this.title = `为<${row.furnitureName}>添加图片`
+      //这里调用查询方法，查询该商品所有的图片
+      this.GetPictureData()
+    },
+
+    Upload(upload){
+      // alert("upload触发")
+      console.log(this.furnitureRow)
+      // console.log(upload)
+      this.file = upload.file
+      // console.log(this.file)
+      if(this.file == null){
+        alert("家具图片为空")
+        this.$message({
+        message: "请添加家具图片",
+        type: 'error' 
+        })
+        return false
+      }
+      // alert("正在提交")
+      let  formData = new FormData()
+      formData.append("furnitureId", this.furnitureRow.furnitureId)
+      formData.append("picture", this.file)
+      AddPictureById(formData).then((response) => {
+        console.log(response)
+        this.$message({
+        message: response.message,
+        type: 'success'
+        })
+        // this.dialogPictureVisible = false
+        this.GetPictureData()
+      })
+    },
+
+
+
 
     OpenDialog(row){
       //显示状态的变量更改
@@ -449,7 +580,7 @@ export default {
         })
     },
 
-    AddTag(formName){
+    AddTag(formName,row){
       this.$refs[formName].validate((valid) => {
         if (valid) {
           // alert('提交成功!');
@@ -460,6 +591,9 @@ export default {
               message: response.message,
               type: 'success'
             })
+            this.innerVisible = false
+            this.ArrVisible[row.furnitureId] = false
+            this.OpenDialog(row)
           })
         } else {
           console.log('error submit!!');
@@ -468,7 +602,7 @@ export default {
       })
     },
 
-    DeleteTag(){
+    DeleteTag(row){
       console.log(this.Checked)
       DeleteTag(this.Checked).then((response) => {
         console.log(response)
@@ -476,14 +610,15 @@ export default {
           message: response.message,
           type: 'success'
         })
+        this.ArrVisible[row.furnitureId] = false
+        this.OpenDialog(row)
       })
     },
 
-    SaveTag(id){
+    SaveTag(row){
       //需要额外写一个判断，如果nowtag跟havetag不同，才允许保存信息
-
       const trueIndex = this.ArrVisible.findIndex((item) => item === true);
-      SaveMapping(id,this.nowTag).then((response) => {
+      SaveMapping(row.furnitureId,this.nowTag).then((response) => {
         console.log(response)
         this.$message({
           message: response.message,

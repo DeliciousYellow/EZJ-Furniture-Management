@@ -26,7 +26,7 @@ service.interceptors.request.use(
       // ['X-Token'] is a custom headers key
       // please modify it according to the actual situation
       
-      //这里是如果vuex中有token，就在请求头加上token
+      //这里是如果cookie中有token，就在请求头加上token
       config.headers['X-Token'] = getToken()
     }
     return config

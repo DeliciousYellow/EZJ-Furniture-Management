@@ -1,4 +1,6 @@
 import request from '@/utils/request'
+import { SHA256 } from 'crypto-js'
+import { getDigestSecret } from '@/utils/auth'
 
 //分页查询商品信息
 export function GetList(page,pageSize) {
@@ -23,35 +25,58 @@ export function GetTagById(id) {
 }
 //保存商品和标签的映射关系
 export function SaveMapping(furnitureId,arrTagId) {
+  const requestData = {
+    'furnitureId' : furnitureId,
+    'arrTagId' : arrTagId
+  }
+  const digestSecret = getDigestSecret()
+  // console.log(JSON.stringify(requestData)+digestSecret)
+  // console.log(digestSecret)
+  // console.log(SHA256(JSON.stringify(requestData)+digestSecret).toString().toUpperCase())
   return request({
     url: `/Admin/SaveMapping`,
     method: 'post',
-    data:{
-      'furnitureId' : furnitureId,
-      'arrTagId' : arrTagId
-    }
+    headers:{
+      'X-Digest': SHA256(JSON.stringify(requestData)+digestSecret).toString().toUpperCase()
+    },
+    data:requestData
   })
 }
 //添加标签
 export function AddTag(formLabelAlign) {
-  console.log(formLabelAlign)
+  const requestData = {
+    'tagName' : formLabelAlign.tagName,
+    'tagType' : formLabelAlign.tagType
+  }
+  const digestSecret = getDigestSecret()
+  // console.log(JSON.stringify(requestData)+digestSecret)
+  // console.log(digestSecret)
+  // console.log(SHA256(JSON.stringify(requestData)+digestSecret).toString().toUpperCase())
   return request({
     url: `/Admin/AddTag`,
     method: 'post',
-    data:{
-      'tagName' : formLabelAlign.tagName,
-      'tagType' : formLabelAlign.tagType
-    }
+    headers:{
+      'X-Digest': SHA256(JSON.stringify(requestData)+digestSecret).toString().toUpperCase()
+    },
+    data:requestData
   })
 }
 //删除标签
 export function DeleteTag(arrTagId) {
+  const requestData = {
+    'arrTagId' : arrTagId
+  }
+  const digestSecret = getDigestSecret()
+  // console.log(JSON.stringify(requestData)+digestSecret)
+  // console.log(digestSecret)
+  // console.log(SHA256(JSON.stringify(requestData)+digestSecret).toString().toUpperCase())
   return request({
     url: `/Admin/DeleteTag`,
     method: 'delete',
-    data:{
-      'arrTagId' : arrTagId
-    }
+    headers:{
+      'X-Digest': SHA256(JSON.stringify(requestData)+digestSecret).toString().toUpperCase()
+    },
+    data:requestData
   })
 }
 //添加商品
@@ -62,19 +87,43 @@ export function AddFurniture(formData) {
     method: 'post',
     timeout: 1000000,//超时时间需要设置的较大，否则容易上传失败
     headers: {
-      'Content-Type': 'multipart/form-data'//文件上传需要设置该参数
+      'Content-Type': 'multipart/form-data',//文件上传需要设置该参数
     },
     data:formData
   })
 }
 //删除商品
 export function DeleteFurniture(furnitureId) {
-  console.log(furnitureId)
+  const requestData = {
+    "furnitureId" : furnitureId
+  }
+  const digestSecret = getDigestSecret()
   return request({
     url: `/Admin/DeleteFurniture`,
     method: 'delete',
-    data:{
-      'furnitureId': furnitureId
-    }
+    headers:{
+      'X-Digest': SHA256(JSON.stringify(requestData)+digestSecret).toString().toUpperCase()
+    },
+    data:requestData
+  })
+}
+
+//查询商品的详情图片
+export function GetPictureById(furnitureId) {
+  return request({
+    url: `/GetPictureById/${furnitureId}`,
+    method: 'get',
+  })
+}
+//添加商品的详情图片
+export function AddPictureById(formData) {
+  return request({
+    url: `/Admin/AddPictureById`,
+    method: 'post',
+    timeout: 1000000,//超时时间需要设置的较大，否则容易上传失败
+    headers: {
+      'Content-Type': 'multipart/form-data',//文件上传需要设置该参数
+    },
+    data:formData
   })
 }

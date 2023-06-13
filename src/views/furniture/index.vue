@@ -26,8 +26,8 @@
           </el-col>
           <el-col :span="9">
             <el-upload class="avatar-uploader"
-            action="自定义上传无效，但保留"
-            accept=".jpg"
+            action="自定义上传时无效，但保留该属性"
+            accept=".jpg/.png"
             auto-upload
             :http-request="Upload"
             :on-change="handleFileChange"
@@ -45,7 +45,7 @@
         </el-form>
       </el-dialog>
     </el-row>
-    <Atable class="child"></Atable>
+    <Atable class="child" ref="atable"></Atable>
   </div>
 </template>
 
@@ -136,6 +136,7 @@ export default {
               type: 'success'
               })
               this.dialogFormVisible = false
+              this.$refs.atable.fetchData()
             })
             .catch((error) => {
               this.$message({

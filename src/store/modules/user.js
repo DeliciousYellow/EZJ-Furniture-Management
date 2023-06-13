@@ -1,5 +1,6 @@
 import { login, logout, getInfo } from '@/api/user'
 import { getToken, setToken, removeToken } from '@/utils/auth'
+import { getDigestSecret, setDigestSecret, removeDigestSecret } from '@/utils/auth'
 import { resetRouter } from '@/router'
 
 const getDefaultState = () => {
@@ -7,7 +8,8 @@ const getDefaultState = () => {
     token: getToken(),
     name: '',
     code: '',
-    avatar: ''
+    avatar: '',
+    digestSecret: ''
   }
 }
 
@@ -28,6 +30,10 @@ const mutations = {
   },
   SET_AVATAR: (state, adminAvatarUrl) => {
     state.avatar = adminAvatarUrl
+  },
+  //提交mutations
+  SET_DIGESTSECRET:(state, digestSecret) => {
+    state.digestSecret = digestSecret
   }
 }
 
@@ -39,8 +45,12 @@ const actions = {
       //这个login方法对应的是api包下的login方法
       login({ adminCode: username.trim(), adminPwd: password }).then(response => {
         const { data } = response
-        commit('SET_TOKEN', data.token)//存储到VueX(内存)
-        setToken(data.token)//存储到cookies(本地)
+        commit('SET_TOKEN', data.token)//存储到VueX
+        setToken(data.token)//存储到cookies
+        
+        commit('SET_DIGESTSECRET', data.digestSecret)//把摘要密钥也存起来
+        setDigestSecret(data.digestSecret)
+        
         resolve()
       }).catch(error => {
         reject(error)
@@ -73,6 +83,8 @@ const actions = {
     return new Promise((resolve, reject) => {
       logout(state.token).then(() => {
         removeToken() // must remove  token  first
+        removeDigestSecret()//同时移除摘要密钥
+
         resetRouter()
         commit('RESET_STATE')
         resolve()
