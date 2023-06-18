@@ -127,3 +127,19 @@ export function AddPictureById(formData) {
     data:formData
   })
 }
+
+//获取分页获取订单信息
+export function GetOrderAllPage(page,pageSize) {
+  return request({
+    url: `/Admin/GetOrderAllPage/${page}/${pageSize}`,
+    method: 'get'
+  })
+}
+
+//获取分页获取日志信息
+export function GetLogAllPage(page,pageSize) {
+  return request({
+    url: `/Admin/GetLogAllPage/${page}/${pageSize}`,
+    method: 'get'
+  })
+}
