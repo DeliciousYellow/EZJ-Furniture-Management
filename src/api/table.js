@@ -92,6 +92,19 @@ export function AddFurniture(formData) {
     data:formData
   })
 }
+//修改商品
+export function UpdateFurniture(formData) {
+  // console.log(formData)
+  return request({
+    url: `/Admin/UpdateFurniture`,
+    method: 'post',
+    timeout: 1000000,//超时时间需要设置的较大，否则容易上传失败
+    headers: {
+      'Content-Type': 'multipart/form-data',//文件上传需要设置该参数
+    },
+    data:formData
+  })
+}
 //删除商品
 export function DeleteFurniture(furnitureId) {
   const requestData = {
@@ -140,6 +153,61 @@ export function GetOrderAllPage(page,pageSize) {
 export function GetLogAllPage(page,pageSize) {
   return request({
     url: `/Admin/GetLogAllPage/${page}/${pageSize}`,
+    method: 'get'
+  })
+}
+
+//根据管理员ID获取管理员信息
+export function GetAdminById(id) {
+  return request({
+    url: `/Admin/GetAdminById/${id}`,
+    method: 'get'
+  })
+}
+
+//根据Id查询对应家具
+export function GetFurnitureById(id) {
+  return request({
+    url: `/getfurnitureById/${id}`,
+    method: 'get'
+  })
+}
+
+//根据Id查询对应地址
+export function GetAddressById(id) {
+  return request({
+    url: `/GetAddressById/${id}`,
+    method: 'get'
+  })
+}
+
+//根据Id查询对应用户
+export function GetUserById(id) {
+  return request({
+    url: `/GetUserById/${id}`,
+    method: 'get'
+  })
+}
+
+//查询某标签下所有家具
+export function GetFurnitureByTag(detail) {
+  return request({
+    url: `/getfurnitureByTag/${detail}`,
+    method: 'get'
+  })
+}
+
+//查询所有标签的类型
+export function GetTypeAll() {
+  return request({
+    url: `/gettypeall`,
+    method: 'get'
+  })
+}
+//查询某类型下所有标签
+export function GetTagByType(type) {
+  return request({
+    url: `/gettag/${type}`,
     method: 'get'
   })
 }

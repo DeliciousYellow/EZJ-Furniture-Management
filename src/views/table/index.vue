@@ -63,6 +63,11 @@
           {{ scope.row.furnitureQuantity }}
         </template>
       </el-table-column>
+      <el-table-column label="销量" width="100" align="center">
+        <template slot-scope="scope">
+          {{ scope.row.salesVolume }}
+        </template>
+      </el-table-column>
       <el-table-column label="商品描述" width="200" align="center">
         <template slot-scope="scope">
           {{ scope.row.detailedInformation }}
@@ -125,7 +130,7 @@
         </template>
       </el-table-column>
     </el-table>
-    
+    <!-- 添加图片的模态框 -->
     <el-dialog :title="title" :visible.sync="dialogPictureVisible">
       <span class="block" v-for="picture in pictures" :key="picture.pictureId">
         <el-image
@@ -149,11 +154,53 @@
         </el-row>
       </el-form>
     </el-dialog>
+    <!-- 修改商品信息的模态框 -->
+    <el-dialog title="修改家具" :visible.sync="dialogFormVisible">
+        <el-form ref="form" :model="form" :rules="rules" label-width="80px">
+          <el-form-item label="家具名称" prop="furnitureName">
+            <el-input v-model="form.furnitureName"></el-input>
+          </el-form-item>
+          <el-form-item label="家具原价" prop="originPrice">
+            <el-input v-model="form.originPrice"></el-input>
+          </el-form-item>
+          <el-form-item label="家具现价" prop="furniturePrice">
+            <el-input v-model="form.furniturePrice"></el-input>
+          </el-form-item>
+          <el-form-item label="库存量" prop="furnitureQuantity">
+            <el-input v-model="form.furnitureQuantity"></el-input>
+          </el-form-item>
+          <el-form-item label="家具描述" prop="detailedInformation">
+            <el-input v-model="form.detailedInformation"></el-input>
+          </el-form-item>
+          <el-row>
+          <el-col :span="3">
+            <h3>家具缩略图</h3>
+          </el-col>
+          <el-col :span="9">
+            <el-upload class="avatar-uploader"
+            action="自定义上传时无效，但保留该属性"
+            accept=".jpg,.jpeg,.png"
+            auto-upload
+            :http-request="Upload"
+            :on-change="handleFileChange"
+            :show-file-list="false">
+              <img v-if="imageUrl" :src="imageUrl" class="avatar">
+              <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+            </el-upload>
+          </el-col>
+          <el-col :span="10" :offset="2" style="margin-top:10%">
+            <el-form-item>
+              <el-button type="primary"  @click="onSubmit('form')">立即修改</el-button>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        </el-form>
+      </el-dialog>
   </div>
 </template>
 
 <script>
-import { GetAllTag, GetList, GetTagById, SaveMapping, AddTag, DeleteTag, DeleteFurniture, AddPictureById, GetPictureById} from '@/api/table'
+import { GetAllTag, GetList, GetTagById, SaveMapping, AddTag, DeleteTag, DeleteFurniture, AddPictureById, UpdateFurniture, GetPictureById} from '@/api/table'
 
 export default {
   filters: {
@@ -251,7 +298,54 @@ export default {
         tagType: [
           { required: true, message: '请输入标签类型', trigger: 'blur' }
         ],
-      }
+      },
+      //修改商品的模态框
+      dialogFormVisible:false,
+      //更改商品的表单
+      form:{
+        furnitureId:null,
+        furnitureName:"",
+        originPrice:"",
+        furniturePrice:"",
+        furnitureQuantity:"",
+        detailedInformation:""
+      },
+      //更改商品表单的规则
+      rules: {
+          furnitureName: [
+            { required: true, message: '请输入家具名称', trigger: 'blur' },
+            { min: 2, max: 15, message: '长度在 2 到 15 个字符', trigger: 'blur' }
+          ],
+          originPrice: [
+            { required: true, message: '请输入家具原价', trigger: 'blur' },
+            {
+              pattern: /^(\d+(\.\d{1,2})?|\d+)$/,
+              message: '请输入有效的数字',
+              trigger: 'blur'
+            }
+          ],
+          furniturePrice: [
+            { required: true, message: '请输入家具现价', trigger: 'blur' },
+            {
+              pattern: /^(\d+(\.\d{1,2})?|\d+)$/,
+              message: '请输入有效的数字',
+              trigger: 'blur'
+            }
+          ],
+          furnitureQuantity: [
+            { required: true, message: '请输入家具库存量', trigger: 'blur' },
+            {
+              pattern: /^(\d+(\.\d{1,2})?|\d+)$/,
+              message: '请输入有效的数字',
+              trigger: 'blur'
+            }
+          ],
+          detailedInformation: [
+            { required: true, message: '请输入家具描述信息', trigger: 'blur' },
+          ]
+        },
+      //记录修改表单中的图片链接
+      imageUrl:null
     }
   },
   created() {
@@ -292,11 +386,92 @@ export default {
       this.fetchData()
     },
 
+    //修改商品信息
+    UpdateById(row){
+      console.log(row)
+      this.dialogFormVisible = true;
 
+      this.form.furnitureId = row.furnitureId,
+      this.form.furnitureName = row.furnitureName,
+      this.form.originPrice = row.originPrice,
+      this.form.furniturePrice = row.furniturePrice,
+      this.form.furnitureQuantity = row.furnitureQuantity,
+      this.form.detailedInformation = row.detailedInformation
 
-    UpdateById(){
-      alert("修改")
+      this.imageUrl = row.furnitureUrl
     },
+    //提交商品修改的按钮事件
+    onSubmit(formName){
+      this.$refs[formName].validate((valid) => {
+          if (valid) {
+            if(this.file == null && this.imageUrl == null){
+              // alert("家具图片为空")
+              this.$message({
+              message: "家具图片不能为空",
+              type: 'error' 
+              })
+              return false
+            }
+            console.log('submit!')
+            let  formData = new FormData()
+
+            //模拟一个假的file对象
+            const fakeFile = new File(["File content"], "图片未作修改时的模拟file对象", { type: "text/plain" });
+            formData.set("img", fakeFile)
+            if(this.file != null){
+              formData.set("img", this.file)
+            }
+            formData.set("furnitureId", this.form.furnitureId)
+            formData.set("furnitureName", this.form.furnitureName)
+            formData.set("originPrice", this.form.originPrice)
+            formData.set("furniturePrice", this.form.furniturePrice)
+            formData.set("furnitureQuantity", this.form.furnitureQuantity)
+            formData.set("detailedInformation", this.form.detailedInformation)
+            // formData.forEach(function(value,key){
+            //     console.log(key,value);
+            // })
+            // console.log("----------------------------------");
+            UpdateFurniture(formData).then((response) => {
+              console.log(response)
+              this.$message({
+              message: response.message,
+              type: 'success'
+              })
+              this.dialogFormVisible = false
+              this.fetchData()
+            })
+            .catch((error) => {
+              this.$message({
+              message: "请检查家具信息格式是否正确",
+              type: 'error'
+              })
+            })
+          } else {
+            console.log('error submit!!');
+            return false;
+          }
+        })
+    },
+    handleFileChange(file) {
+        // alert("change触发")
+        console.log(file); // 完整的File对象
+        this.file = file.raw
+
+        if(window.FileReader) {
+          var fr = new FileReader();
+          fr.readAsDataURL(this.file);
+          fr.onload = (e) => {
+            // console.log(e.target); // e.target返回FileReader对象,里面包含：事件，状态，属性，结果等
+
+            // console.log(e.target.result); // 读取的结果，dataURL格式的
+            
+            this.imageUrl = e.target.result; // 图片可显示出来
+          }
+        } else {
+          alert('暂不支持FileReader')
+        }
+    },
+
     DeleteById(furnitureId){
       var msg = "您真的确定要删除吗?请确认！"; 
       if (confirm(msg)==true){ 

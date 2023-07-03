@@ -27,7 +27,7 @@
           <el-col :span="9">
             <el-upload class="avatar-uploader"
             action="自定义上传时无效，但保留该属性"
-            accept=".jpg/.png"
+            accept=".jpg,.jpeg,.png"
             auto-upload
             :http-request="Upload"
             :on-change="handleFileChange"

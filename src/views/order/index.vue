@@ -15,11 +15,42 @@
       </el-pagination>
     </div>
 
-    <el-table :stripe="true" class="table" 
+    <div class="table">
+      <el-table :stripe="true" class="table" 
       height="568"
       :border="true"
       :data="tableData"
       style="width: 100%">
+      <el-table-column type="expand">
+      <!-- 展开后的显示 -->
+      <template slot-scope="props">
+        <el-form label-position="left" inline class="demo-table-expand">
+          <el-form-item label="家具缩略图">
+            <el-image
+            style="width: 100px; height: 100px"
+            :src="props.row.furnitureUrl"
+            fit="fill">
+          </el-image>
+          </el-form-item>
+          <el-form-item label="家具名称">
+            <span>{{ props.row.furnitureName }}</span>
+          </el-form-item>
+          <el-form-item label="收货人姓名">
+            <span>{{ props.row.consigneeName }}</span>
+          </el-form-item>
+          <el-form-item label="收货人电话">
+            <span>{{ props.row.consigneeNumber }}</span>
+          </el-form-item>
+          <el-form-item label="收货人地址">
+            <span>{{ props.row.address }}</span>
+          </el-form-item>
+          <el-form-item label="下单用户">
+            <span>{{ props.row.nickName }}</span>
+          </el-form-item>
+        </el-form>
+      </template>
+    </el-table-column>
+    <!-- 展开前的显示 -->
       <el-table-column
         prop="orderId"
         label="订单ID"
@@ -68,32 +99,20 @@
         width="180">
       </el-table-column>
       
-    </el-table>
+      </el-table>
+    </div>
   </div>
 </template>
 
 <script>
-import { GetOrderAllPage } from '@/api/table'
+import { GetOrderAllPage, GetFurnitureById, GetAddressById, GetUserById } from '@/api/table'
 export default {
   data() {
     return {
-      tableData: [{
-        date: '2016-05-02',
-        name: '王小虎',
-        address: '上海市普陀区金沙江路 1518 弄'
-      }, {
-        date: '2016-05-04',
-        name: '王小虎',
-        address: '上海市普陀区金沙江路 1517 弄'
-      }, {
-        date: '2016-05-01',
-        name: '王小虎',
-        address: '上海市普陀区金沙江路 1519 弄'
-      }, {
-        date: '2016-05-03',
-        name: '王小虎',
-        address: '上海市普陀区金沙江路 1516 弄'
-      }],
+      //查询的订单数据
+      orderData: [],
+      //渲染表格的数据
+      tableData: [],
       //分页查询的备选页面大小
       ArraySize:[5,7,10,50,100,300,500],
       //分页查询的页码、每页的大小、总记录条数
@@ -107,13 +126,50 @@ export default {
     this.onload()
   },
   methods:{
-    onload(){
-      GetOrderAllPage(this.page,this.pageSize).then((response) => {
-        console.log(response)
-        const tableData = response.data.orders
-        this.total = response.data.total
-        this.tableData = tableData  
-      })
+    onload() {
+      GetOrderAllPage(this.page, this.pageSize)
+        .then((response) => {
+          console.log(response);
+          this.total = response.data.total;
+
+          const orderData = response.data.orders;
+          this.orderData = orderData;
+
+          const furniturePromises = orderData.map((item) => {
+            return GetFurnitureById(item.furnitureId)
+              .then((res) => {
+                item.furnitureName = res.data.furnitureName;
+                item.furnitureUrl = res.data.furnitureUrl;
+              });
+          });
+
+          const addressPromises = orderData.map((item) => {
+            return GetAddressById(item.addressId)
+              .then((res) => {
+                item.consigneeName = res.data.consigneeName;
+                item.consigneeNumber = res.data.consigneeNumber;
+                item.address = res.data.addressRegion + res.data.addressDetail;
+              });
+          });
+
+          const userPromises = orderData.map((item) => {
+            return GetUserById(item.userId)
+              .then((res) => {
+                item.nickName = res.data.nickName;
+              });
+          });
+
+          const allPromises = [...furniturePromises, ...addressPromises, ...userPromises];
+
+          return Promise.all(allPromises);
+        })
+        .then(() => {
+          this.tableData = this.orderData;
+          console.log(this.tableData);
+        })
+        .catch((error) => {
+          console.error(error);
+        });
     },
     handleSizeChange(val){
       // console.log(`分页大小发生了改变=>${val}`)
@@ -130,5 +186,24 @@ export default {
 </script>
 
 <style>
+.block{
+  margin-left: 40px;
+}
 
+.table{
+  margin-left: 20px;
+}
+
+.demo-table-expand {
+    font-size: 0;
+  }
+  .demo-table-expand label {
+    width: 90px;
+    color: #99a9bf;
+  }
+  .demo-table-expand .el-form-item {
+    margin-right: 0;
+    margin-bottom: 0;
+    width: 50%;
+  }
 </style>

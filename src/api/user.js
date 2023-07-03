@@ -17,6 +17,7 @@ export function getInfo(token) {
   })
 }
 
+//退出登录
 export function logout() {
   return request({
     url: 'AdminLogout',
