@@ -146,28 +146,33 @@ export default {
           const addressPromises = orderData.map((item) => {
             return GetAddressById(item.addressId)
               .then((res) => {
-                item.consigneeName = res.data.consigneeName;
-                item.consigneeNumber = res.data.consigneeNumber;
-                item.address = res.data.addressRegion + res.data.addressDetail;
-              });
+                // console.log(res)
+                if(res.data!=null){
+                  item.consigneeName = res.data.consigneeName
+                  item.consigneeNumber = res.data.consigneeNumber
+                  item.address = res.data.addressRegion + res.data.addressDetail
+                }
+              })
           });
 
           const userPromises = orderData.map((item) => {
             return GetUserById(item.userId)
               .then((res) => {
-                item.nickName = res.data.nickName;
+                item.nickName = res.data.nickName
               });
           });
 
-          const allPromises = [...furniturePromises, ...addressPromises, ...userPromises];
+          const allPromises = [...furniturePromises, ...addressPromises, ...userPromises]
 
-          return Promise.all(allPromises);
+          return Promise.all(allPromises)
         })
         .then(() => {
+          console.log('循环查询结束')
           this.tableData = this.orderData;
           console.log(this.tableData);
         })
         .catch((error) => {
+          console.log('出错')
           console.error(error);
         });
     },
